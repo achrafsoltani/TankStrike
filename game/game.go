@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/entity"
 	"github.com/AchrafSoltani/TankStrike/render"
@@ -14,6 +16,7 @@ type Game struct {
 	State     GameState
 	Grid      *world.Grid
 	Renderer  *render.Renderer
+	HUD       *render.HUDRenderer
 	Input     *system.Input
 	Player    *entity.PlayerTank
 	Eagle     *entity.Eagle
@@ -25,9 +28,9 @@ type Game struct {
 	Time      float64
 
 	// Transition timers
-	GameOverTimer    float64
-	LevelComplTimer  float64
-	LevelIntroTimer  float64
+	GameOverTimer   float64
+	LevelComplTimer float64
+	LevelIntroTimer float64
 }
 
 // NewGame creates a new game instance.
@@ -36,6 +39,7 @@ func NewGame() *Game {
 		State:     StateMenu,
 		Grid:      world.NewGrid(),
 		Renderer:  render.NewRenderer(),
+		HUD:       render.NewHUDRenderer(),
 		Input:     system.NewInput(),
 		Player:    entity.NewPlayerTank(),
 		Particles: render.NewParticlePool(),
@@ -127,7 +131,7 @@ func (g *Game) Update(dt float64) {
 				if next < len(world.Levels) {
 					g.startLevel(next)
 				} else {
-					g.State = StateMenu // Beat the game
+					g.State = StateMenu
 				}
 			}
 		}
@@ -135,14 +139,12 @@ func (g *Game) Update(dt float64) {
 }
 
 func (g *Game) updatePlaying(dt float64) {
-	// Player input and movement
 	g.Player.HandleInput(g.Input.Keys)
 	g.Player.UpdatePlayer(dt)
 
 	otherTanks := g.enemyBBoxes()
 	system.MovePlayerTank(g.Player, g.Grid, dt, otherTanks)
 
-	// Player shooting
 	if g.Player.WantsToShoot(g.Input.Keys) && g.Player.CanShoot() {
 		if system.CountPlayerBullets(g.Bullets) < config.MaxPlayerBullets {
 			bx, by := g.Player.Shoot()
@@ -151,12 +153,10 @@ func (g *Game) updatePlaying(dt float64) {
 		}
 	}
 
-	// Spawn enemies
 	if enemy := g.Spawner.Update(dt, g.countAliveEnemies()); enemy != nil {
 		g.Enemies = append(g.Enemies, enemy)
 	}
 
-	// Update enemies
 	eagleCX, eagleCY := g.Eagle.CenterX(), g.Eagle.CenterY()
 	for _, e := range g.Enemies {
 		if !e.Alive {
@@ -174,20 +174,16 @@ func (g *Game) updatePlaying(dt float64) {
 		}
 	}
 
-	// Update eagle
 	g.Eagle.Update(dt)
 
-	// Update bullets
 	for _, b := range g.Bullets {
 		b.Update(dt)
 	}
 
-	// Bullet-grid collisions
 	for _, b := range g.Bullets {
 		system.BulletGridCollision(b, g.Grid, g.Particles)
 	}
 
-	// Player bullets hit enemies
 	for _, b := range g.Bullets {
 		if !b.Active || !b.IsPlayer {
 			continue
@@ -208,7 +204,6 @@ func (g *Game) updatePlaying(dt float64) {
 		}
 	}
 
-	// Enemy bullets hit player
 	for _, b := range g.Bullets {
 		if !b.Active || b.IsPlayer {
 			continue
@@ -222,7 +217,6 @@ func (g *Game) updatePlaying(dt float64) {
 		}
 	}
 
-	// Check eagle destroyed
 	if g.Eagle != nil {
 		for y := 0; y < config.GridHeight; y++ {
 			for x := 0; x < config.GridWidth; x++ {
@@ -233,19 +227,16 @@ func (g *Game) updatePlaying(dt float64) {
 		}
 	}
 
-	// Game over conditions
 	if !g.Eagle.Alive || (g.Player.Lives <= 0 && !g.Player.Alive) {
 		g.State = StateGameOver
 		g.GameOverTimer = 2.0
 	}
 
-	// Level complete
 	if g.Spawner.Done() && g.countAliveEnemies() == 0 {
 		g.State = StateLevelComplete
 		g.LevelComplTimer = 1.5
 	}
 
-	// Clean up
 	g.cleanBullets()
 	g.cleanEnemies()
 	g.Particles.Update(dt)
@@ -336,14 +327,17 @@ func (g *Game) Draw(canvas *glow.Canvas) {
 		g.drawLevelIntro(canvas)
 	case StatePlaying, StatePaused:
 		g.drawPlayField(canvas)
+		g.drawHUD(canvas)
 		if g.State == StatePaused {
 			g.drawPauseOverlay(canvas)
 		}
 	case StateGameOver:
 		g.drawPlayField(canvas)
+		g.drawHUD(canvas)
 		g.drawGameOver(canvas)
 	case StateLevelComplete:
 		g.drawPlayField(canvas)
+		g.drawHUD(canvas)
 		g.drawLevelComplete(canvas)
 	}
 }
@@ -352,7 +346,6 @@ func (g *Game) drawPlayField(canvas *glow.Canvas) {
 	g.Renderer.DrawPlayAreaBorder(canvas)
 	g.Renderer.DrawGrid(canvas, g.Grid)
 
-	// Enemies
 	for _, e := range g.Enemies {
 		colors := enemyColors(e.Type)
 		if e.IsFlashing() {
@@ -361,7 +354,6 @@ func (g *Game) drawPlayField(canvas *glow.Canvas) {
 		render.DrawTank(canvas, &e.Tank, colors, config.Padding, config.Padding)
 	}
 
-	// Player
 	if g.Player.Alive {
 		render.DrawTank(canvas, &g.Player.Tank, render.PlayerColors, config.Padding, config.Padding)
 		if g.Player.IsInvulnerable() {
@@ -369,47 +361,58 @@ func (g *Game) drawPlayField(canvas *glow.Canvas) {
 		}
 	}
 
-	// Bullets
 	for _, b := range g.Bullets {
 		render.DrawBullet(canvas, b, config.Padding, config.Padding)
 	}
 
-	// Particles
 	g.Particles.Draw(canvas, config.Padding, config.Padding)
-
-	// Forest overlay
 	g.Renderer.DrawForest(canvas, g.Grid)
 }
 
-// Minimal text rendering using rectangles (replaced by bitmap font in Phase 6)
-func drawSimpleText(canvas *glow.Canvas, text string, x, y int, color glow.Color, scale int) {
-	// Placeholder: draw a coloured rectangle as text indicator
-	w := len(text) * 6 * scale
-	canvas.DrawRect(x, y, w, 8*scale, color)
+func (g *Game) drawHUD(canvas *glow.Canvas) {
+	remaining := g.Spawner.Remaining() + g.countAliveEnemies()
+	g.HUD.DrawHUD(canvas, remaining, g.Player.Lives, g.Level, g.Player.Score)
 }
 
 func (g *Game) drawMenu(canvas *glow.Canvas) {
-	// Simple placeholder menu
 	cx := config.WindowWidth / 2
-	cy := config.WindowHeight / 2
 
-	// Title box
-	canvas.DrawRect(cx-120, cy-80, 240, 40, render.ColorYellow)
+	// Title
+	render.DrawTextCentered(canvas, "TANK STRIKE", cx, 150, render.ColorYellow, 4)
 
-	// "Press Enter" indicator
+	// Subtitle
+	render.DrawTextCentered(canvas, "A BATTLE CITY REMAKE", cx, 200, render.ColorGray, 2)
+
+	// Tank art (simple)
+	tankX := cx - 24
+	tankY := 260
+	canvas.DrawRect(tankX, tankY, 48, 48, render.ColorPlayerBody)
+	canvas.DrawRect(tankX+18, tankY-16, 12, 20, render.ColorPlayerTread)
+	canvas.FillCircle(tankX+24, tankY+24, 10, render.ColorPlayerDark)
+
+	// Menu option
 	if int(g.Time*2)%2 == 0 {
-		canvas.DrawRect(cx-80, cy+20, 160, 20, render.ColorWhite)
+		render.DrawTextCentered(canvas, "PRESS ENTER TO START", cx, 400, render.ColorWhite, 2)
 	}
+
+	// Controls info
+	render.DrawTextCentered(canvas, "WASD/ARROWS: MOVE", cx, 480, render.ColorGray, 1)
+	render.DrawTextCentered(canvas, "SPACE: SHOOT  ESC: PAUSE", cx, 496, render.ColorGray, 1)
 }
 
 func (g *Game) drawLevelIntro(canvas *glow.Canvas) {
 	cx := config.WindowWidth / 2
 	cy := config.WindowHeight / 2
-	canvas.DrawRect(cx-60, cy-12, 120, 24, render.ColorGray)
+
+	// Grey background
+	canvas.DrawRect(0, 0, config.WindowWidth, config.WindowHeight, render.ColorDarkGray)
+
+	text := fmt.Sprintf("STAGE %d", g.Level+1)
+	render.DrawTextCentered(canvas, text, cx, cy-20, render.ColorWhite, 3)
 }
 
 func (g *Game) drawPauseOverlay(canvas *glow.Canvas) {
-	// Dithered checkerboard pattern for semi-transparency
+	// Dithered checkerboard
 	for y := 0; y < config.WindowHeight; y += 2 {
 		for x := 0; x < config.WindowWidth; x += 2 {
 			canvas.SetPixel(x, y, render.ColorBlack)
@@ -417,7 +420,9 @@ func (g *Game) drawPauseOverlay(canvas *glow.Canvas) {
 	}
 	cx := config.WindowWidth / 2
 	cy := config.WindowHeight / 2
-	canvas.DrawRect(cx-50, cy-12, 100, 24, render.ColorYellow)
+
+	canvas.DrawRect(cx-100, cy-30, 200, 60, render.ColorBlack)
+	render.DrawTextCentered(canvas, "PAUSED", cx, cy-12, render.ColorYellow, 3)
 }
 
 func (g *Game) drawGameOver(canvas *glow.Canvas) {
@@ -429,11 +434,29 @@ func (g *Game) drawGameOver(canvas *glow.Canvas) {
 	}
 	cx := config.WindowWidth / 2
 	cy := config.WindowHeight / 2
-	canvas.DrawRect(cx-70, cy-16, 140, 32, render.ColorRed)
+
+	canvas.DrawRect(cx-120, cy-50, 240, 100, render.ColorBlack)
+	render.DrawTextCentered(canvas, "GAME OVER", cx, cy-30, render.ColorRed, 3)
+
+	scoreText := fmt.Sprintf("SCORE: %d", g.Player.Score)
+	render.DrawTextCentered(canvas, scoreText, cx, cy+5, render.ColorWhite, 2)
+
+	if g.GameOverTimer <= 0 && int(g.Time*2)%2 == 0 {
+		render.DrawTextCentered(canvas, "PRESS ENTER", cx, cy+35, render.ColorGray, 1)
+	}
 }
 
 func (g *Game) drawLevelComplete(canvas *glow.Canvas) {
 	cx := config.WindowWidth / 2
 	cy := config.WindowHeight / 2
-	canvas.DrawRect(cx-80, cy-16, 160, 32, render.ColorPlayerBody)
+
+	canvas.DrawRect(cx-140, cy-50, 280, 100, render.ColorBlack)
+	render.DrawTextCentered(canvas, "STAGE CLEAR!", cx, cy-30, render.ColorPlayerBody, 3)
+
+	scoreText := fmt.Sprintf("SCORE: %d", g.Player.Score)
+	render.DrawTextCentered(canvas, scoreText, cx, cy+5, render.ColorYellow, 2)
+
+	if g.LevelComplTimer <= 0 && int(g.Time*2)%2 == 0 {
+		render.DrawTextCentered(canvas, "PRESS ENTER", cx, cy+35, render.ColorGray, 1)
+	}
 }
