@@ -5,6 +5,7 @@ import (
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/entity"
 	"github.com/AchrafSoltani/TankStrike/render"
+	"github.com/AchrafSoltani/TankStrike/save"
 	"github.com/AchrafSoltani/TankStrike/system"
 	"github.com/AchrafSoltani/TankStrike/world"
 	"github.com/AchrafSoltani/glow"
@@ -25,6 +26,8 @@ type Game struct {
 	Particles *render.ParticlePool
 	Spawner   *system.Spawner
 	Audio     *audio.Engine
+	Shake     *system.ScreenShake
+	SaveData  *save.SaveData
 	Level     int
 	Time      float64
 
@@ -59,6 +62,8 @@ func NewGame() *Game {
 		Player:    entity.NewPlayerTank(),
 		Particles: render.NewParticlePool(),
 		Audio:     audio.NewEngine(),
+		Shake:     &system.ScreenShake{},
+		SaveData:  save.Load(),
 		Level:     0,
 		MenuOptions: []render.MenuOption{
 			{Label: "NEW GAME"},
@@ -252,6 +257,7 @@ func (g *Game) updatePlaying(dt float64) {
 					g.Player.Score += e.ScoreValue
 					g.Particles.SpawnExplosion(e.CenterX(), e.CenterY(), 35)
 					g.Audio.PlayExplode()
+					g.Shake.Trigger(0.2, 4)
 					g.trackKill(e.Type)
 					if e.HasPowerUp {
 						g.PowerUps = append(g.PowerUps, entity.NewPowerUp())
@@ -271,6 +277,7 @@ func (g *Game) updatePlaying(dt float64) {
 				b.Active = false
 				g.Particles.SpawnExplosion(g.Player.CenterX(), g.Player.CenterY(), 30)
 				g.Audio.PlayExplode()
+				g.Shake.Trigger(0.3, 6)
 				g.Player.Die()
 			}
 		}
@@ -327,16 +334,20 @@ func (g *Game) updatePlaying(dt float64) {
 		g.State = StateGameOver
 		g.GameOverTimer = 2.0
 		g.Audio.PlayGameOver()
+		g.Shake.Trigger(0.5, 8)
+		g.saveProgress()
 	}
 
 	if g.Spawner.Done() && g.countAliveEnemies() == 0 {
 		g.State = StateLevelComplete
 		g.LevelComplTimer = 1.5
+		g.saveProgress()
 	}
 
 	g.cleanBullets()
 	g.cleanEnemies()
 	g.Particles.Update(dt)
+	g.Shake.Update(dt)
 
 	// Debug level switching
 	if g.Input.IsJustPressed(glow.KeyN) {
@@ -389,6 +400,16 @@ func (g *Game) cleanBullets() {
 		}
 	}
 	g.Bullets = g.Bullets[:n]
+}
+
+func (g *Game) saveProgress() {
+	if g.Player.Score > g.SaveData.HighScore {
+		g.SaveData.HighScore = g.Player.Score
+	}
+	if g.Level+1 > g.SaveData.MaxLevel {
+		g.SaveData.MaxLevel = g.Level + 1
+	}
+	save.Save(g.SaveData)
 }
 
 func (g *Game) trackKill(typ entity.EnemyType) {
@@ -531,7 +552,12 @@ func (g *Game) Draw(canvas *glow.Canvas) {
 }
 
 func (g *Game) drawPlayField(canvas *glow.Canvas) {
+	ox := config.Padding + g.Shake.OffsetX
+	oy := config.Padding + g.Shake.OffsetY
+
 	g.Renderer.DrawPlayAreaBorder(canvas)
+	g.Renderer.OffsetX = ox
+	g.Renderer.OffsetY = oy
 	g.Renderer.DrawGrid(canvas, g.Grid)
 
 	for _, e := range g.Enemies {
@@ -539,27 +565,30 @@ func (g *Game) drawPlayField(canvas *glow.Canvas) {
 		if e.IsFlashing() {
 			colors = render.TankColors{Body: render.ColorWhite, Tread: render.ColorYellow, Dark: render.ColorGray}
 		}
-		render.DrawTank(canvas, &e.Tank, colors, config.Padding, config.Padding)
+		render.DrawTank(canvas, &e.Tank, colors, ox, oy)
 	}
 
 	if g.Player.Alive {
-		render.DrawTank(canvas, &g.Player.Tank, render.PlayerColors, config.Padding, config.Padding)
+		render.DrawTank(canvas, &g.Player.Tank, render.PlayerColors, ox, oy)
 		if g.Player.IsInvulnerable() {
-			render.DrawShield(canvas, &g.Player.Tank, config.Padding, config.Padding, g.Time)
+			render.DrawShield(canvas, &g.Player.Tank, ox, oy, g.Time)
 		}
 	}
 
 	for _, b := range g.Bullets {
-		render.DrawBullet(canvas, b, config.Padding, config.Padding)
+		render.DrawBullet(canvas, b, ox, oy)
 	}
 
-	// Power-ups
 	for _, p := range g.PowerUps {
-		render.DrawPowerUp(canvas, p, config.Padding, config.Padding)
+		render.DrawPowerUp(canvas, p, ox, oy)
 	}
 
-	g.Particles.Draw(canvas, config.Padding, config.Padding)
+	g.Particles.Draw(canvas, ox, oy)
 	g.Renderer.DrawForest(canvas, g.Grid)
+
+	// Reset offsets
+	g.Renderer.OffsetX = config.Padding
+	g.Renderer.OffsetY = config.Padding
 }
 
 func (g *Game) drawHUD(canvas *glow.Canvas) {
