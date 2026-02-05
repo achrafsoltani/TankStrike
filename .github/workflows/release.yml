@@ -26,61 +26,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache-dependency-path: TankStrike/go.sum
 
       - name: Build Linux amd64
         working-directory: TankStrike
         run: |
-          go build -ldflags="-s -w" -o tankstrike main.go
+          go build -ldflags="-s -w" -o tankstrike .
           tar czf tankstrike-linux-amd64.tar.gz tankstrike README.md screenshot.png
 
       - name: Build .deb package
         working-directory: TankStrike
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ARCH="amd64"
-          PKG_DIR="tankstrike_${VERSION}_${ARCH}"
-
-          mkdir -p "${PKG_DIR}/DEBIAN"
-          mkdir -p "${PKG_DIR}/usr/bin"
-          mkdir -p "${PKG_DIR}/usr/share/applications"
-
-          cp tankstrike "${PKG_DIR}/usr/bin/tankstrike"
-          chmod 755 "${PKG_DIR}/usr/bin/tankstrike"
-
-          BINARY_SIZE=$(stat --format="%s" tankstrike)
-          INSTALLED_SIZE=$(( BINARY_SIZE / 1024 ))
-
-          cat > "${PKG_DIR}/usr/share/applications/tankstrike.desktop" <<DESKTOP
-          [Desktop Entry]
-          Type=Application
-          Name=TankStrike
-          Comment=A modern Battle City remake
-          Exec=tankstrike
-          Icon=tankstrike
-          Terminal=false
-          Categories=Game;ActionGame;
-          Keywords=tank;battle;city;arcade;
-          DESKTOP
-
-          cat > "${PKG_DIR}/DEBIAN/control" <<CONTROL
-          Package: tankstrike
-          Version: ${VERSION}
-          Section: games
-          Priority: optional
-          Architecture: ${ARCH}
-          Depends: libx11-6 | xwayland
-          Installed-Size: ${INSTALLED_SIZE}
-          Maintainer: Achraf Soltani <contact@achrafsoltani.me>
-          Homepage: https://github.com/AchrafSoltani/TankStrike
-          Description: A modern Battle City remake
-           TankStrike is a modern recreation of the classic Battle City (NES) game,
-           built entirely in Go with the Glow engine. Features 10 levels, 4 enemy
-           types, 6 power-ups, procedural audio, and particle effects.
-          CONTROL
-
-          dpkg-deb --build --root-owner-group "${PKG_DIR}"
+        run: bash build-deb-ci.sh "${GITHUB_REF_NAME#v}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
