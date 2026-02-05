@@ -32,6 +32,12 @@ type Game struct {
 	ClockTimer  float64 // freeze enemies timer
 	ShovelTimer float64 // fortified eagle timer
 
+	// Level stats
+	KillsBasic  int
+	KillsFast   int
+	KillsPower  int
+	KillsArmour int
+
 	// Transition timers
 	GameOverTimer   float64
 	LevelComplTimer float64
@@ -69,6 +75,10 @@ func (g *Game) startLevel(index int) {
 		g.PowerUps = g.PowerUps[:0]
 		g.ClockTimer = 0
 		g.ShovelTimer = 0
+		g.KillsBasic = 0
+		g.KillsFast = 0
+		g.KillsPower = 0
+		g.KillsArmour = 0
 		g.Spawner = system.NewSpawner(index)
 		g.findEagle()
 		g.Player.Respawn()
@@ -211,6 +221,7 @@ func (g *Game) updatePlaying(dt float64) {
 				if destroyed {
 					g.Player.Score += e.ScoreValue
 					g.Particles.SpawnExplosion(e.CenterX(), e.CenterY(), 35)
+					g.trackKill(e.Type)
 					if e.HasPowerUp {
 						g.PowerUps = append(g.PowerUps, entity.NewPowerUp())
 					}
@@ -344,6 +355,19 @@ func (g *Game) cleanBullets() {
 		}
 	}
 	g.Bullets = g.Bullets[:n]
+}
+
+func (g *Game) trackKill(typ entity.EnemyType) {
+	switch typ {
+	case entity.EnemyBasic:
+		g.KillsBasic++
+	case entity.EnemyFast:
+		g.KillsFast++
+	case entity.EnemyPower:
+		g.KillsPower++
+	case entity.EnemyArmour:
+		g.KillsArmour++
+	}
 }
 
 func (g *Game) cleanPowerUps() {
@@ -583,15 +607,47 @@ func (g *Game) drawGameOver(canvas *glow.Canvas) {
 
 func (g *Game) drawLevelComplete(canvas *glow.Canvas) {
 	cx := config.WindowWidth / 2
-	cy := config.WindowHeight / 2
 
-	canvas.DrawRect(cx-140, cy-50, 280, 100, render.ColorBlack)
-	render.DrawTextCentered(canvas, "STAGE CLEAR!", cx, cy-30, render.ColorPlayerBody, 3)
+	// Dark overlay
+	canvas.DrawRect(cx-180, 80, 360, 500, render.ColorBlack)
+
+	y := 100
+	render.DrawTextCentered(canvas, "STAGE CLEAR!", cx, y, render.ColorPlayerBody, 3)
+	y += 40
 
 	scoreText := fmt.Sprintf("SCORE: %d", g.Player.Score)
-	render.DrawTextCentered(canvas, scoreText, cx, cy+5, render.ColorYellow, 2)
+	render.DrawTextCentered(canvas, scoreText, cx, y, render.ColorYellow, 2)
+	y += 40
+
+	// Kill tally
+	render.DrawTextCentered(canvas, "- KILL TALLY -", cx, y, render.ColorWhite, 2)
+	y += 30
+
+	tallyX := cx - 100
+	drawTallyRow(canvas, tallyX, y, "BASIC", g.KillsBasic, config.ScoreBasic, render.ColorEnemyBasicBody)
+	y += 24
+	drawTallyRow(canvas, tallyX, y, "FAST", g.KillsFast, config.ScoreFast, render.ColorEnemyFastBody)
+	y += 24
+	drawTallyRow(canvas, tallyX, y, "POWER", g.KillsPower, config.ScorePower, render.ColorEnemyPowerBody)
+	y += 24
+	drawTallyRow(canvas, tallyX, y, "ARMOUR", g.KillsArmour, config.ScoreArmour, render.ColorEnemyArmourBody)
+	y += 36
+
+	total := g.KillsBasic + g.KillsFast + g.KillsPower + g.KillsArmour
+	totalText := fmt.Sprintf("TOTAL: %d", total)
+	render.DrawTextCentered(canvas, totalText, cx, y, render.ColorWhite, 2)
 
 	if g.LevelComplTimer <= 0 && int(g.Time*2)%2 == 0 {
-		render.DrawTextCentered(canvas, "PRESS ENTER", cx, cy+35, render.ColorGray, 1)
+		render.DrawTextCentered(canvas, "PRESS ENTER", cx, y+40, render.ColorGray, 1)
 	}
+}
+
+func drawTallyRow(canvas *glow.Canvas, x, y int, name string, kills int, pts int, color glow.Color) {
+	// Colour indicator
+	canvas.DrawRect(x, y+2, 12, 10, color)
+	// Name
+	render.DrawText(canvas, name, x+18, y, render.ColorWhite, 1)
+	// Count and score
+	text := fmt.Sprintf("%2d x %3d = %5d", kills, pts, kills*pts)
+	render.DrawText(canvas, text, x+80, y, render.ColorYellow, 1)
 }
