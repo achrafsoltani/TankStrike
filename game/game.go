@@ -11,24 +11,27 @@ import (
 
 // Game is the top-level game orchestrator.
 type Game struct {
-	State    GameState
-	Grid     *world.Grid
-	Renderer *render.Renderer
-	Input    *system.Input
-	Player   *entity.PlayerTank
-	Level    int
-	Time     float64
+	State     GameState
+	Grid      *world.Grid
+	Renderer  *render.Renderer
+	Input     *system.Input
+	Player    *entity.PlayerTank
+	Bullets   []*entity.Bullet
+	Particles *render.ParticlePool
+	Level     int
+	Time      float64
 }
 
 // NewGame creates a new game instance.
 func NewGame() *Game {
 	g := &Game{
-		State:    StatePlaying,
-		Grid:     world.NewGrid(),
-		Renderer: render.NewRenderer(),
-		Input:    system.NewInput(),
-		Player:   entity.NewPlayerTank(),
-		Level:    0,
+		State:     StatePlaying,
+		Grid:      world.NewGrid(),
+		Renderer:  render.NewRenderer(),
+		Input:     system.NewInput(),
+		Player:    entity.NewPlayerTank(),
+		Particles: render.NewParticlePool(),
+		Level:     0,
 	}
 	g.LoadLevel(0)
 	return g
@@ -39,6 +42,7 @@ func (g *Game) LoadLevel(index int) {
 	if index >= 0 && index < len(world.Levels) {
 		g.Level = index
 		world.LoadLevel(g.Grid, world.Levels[index])
+		g.Bullets = g.Bullets[:0]
 	}
 }
 
@@ -69,11 +73,36 @@ func (g *Game) updatePlaying(dt float64) {
 	g.Player.HandleInput(g.Input.Keys)
 	g.Player.UpdatePlayer(dt)
 
-	// Move player (no other tanks yet, empty slice)
+	// Move player
 	var otherTanks []system.BBox
 	system.MovePlayerTank(g.Player, g.Grid, dt, otherTanks)
 
-	// Level switching with N/P keys (debug/convenience)
+	// Player shooting
+	if g.Player.WantsToShoot(g.Input.Keys) && g.Player.CanShoot() {
+		if system.CountPlayerBullets(g.Bullets) < config.MaxPlayerBullets {
+			bx, by := g.Player.Shoot()
+			bullet := entity.NewBullet(bx, by, g.Player.Dir, g.Player.BulletSpeed, g.Player.PowerLevel, true)
+			g.Bullets = append(g.Bullets, bullet)
+		}
+	}
+
+	// Update bullets
+	for _, b := range g.Bullets {
+		b.Update(dt)
+	}
+
+	// Bullet-grid collisions
+	for _, b := range g.Bullets {
+		system.BulletGridCollision(b, g.Grid, g.Particles)
+	}
+
+	// Clean up inactive bullets
+	g.cleanBullets()
+
+	// Update particles
+	g.Particles.Update(dt)
+
+	// Level switching (debug)
 	if g.Input.IsJustPressed(glow.KeyN) {
 		next := g.Level + 1
 		if next < len(world.Levels) {
@@ -86,6 +115,17 @@ func (g *Game) updatePlaying(dt float64) {
 			g.LoadLevel(prev)
 		}
 	}
+}
+
+func (g *Game) cleanBullets() {
+	n := 0
+	for _, b := range g.Bullets {
+		if b.Active {
+			g.Bullets[n] = b
+			n++
+		}
+	}
+	g.Bullets = g.Bullets[:n]
 }
 
 // Draw renders the current game state.
@@ -101,6 +141,14 @@ func (g *Game) Draw(canvas *glow.Canvas) {
 		}
 	}
 
-	// Forest overlay (on top of tanks)
+	// Draw bullets
+	for _, b := range g.Bullets {
+		render.DrawBullet(canvas, b, config.Padding, config.Padding)
+	}
+
+	// Particles
+	g.Particles.Draw(canvas, config.Padding, config.Padding)
+
+	// Forest overlay (on top of everything)
 	g.Renderer.DrawForest(canvas, g.Grid)
 }
