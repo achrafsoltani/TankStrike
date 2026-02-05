@@ -1,8 +1,6 @@
 package game
 
 import (
-	"fmt"
-
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/entity"
 	"github.com/AchrafSoltani/TankStrike/render"
@@ -38,6 +36,10 @@ type Game struct {
 	KillsPower  int
 	KillsArmour int
 
+	// Menu state
+	MenuSelection int
+	MenuOptions   []render.MenuOption
+
 	// Transition timers
 	GameOverTimer   float64
 	LevelComplTimer float64
@@ -55,6 +57,10 @@ func NewGame() *Game {
 		Player:    entity.NewPlayerTank(),
 		Particles: render.NewParticlePool(),
 		Level:     0,
+		MenuOptions: []render.MenuOption{
+			{Label: "NEW GAME"},
+			{Label: "CONTINUE"},
+		},
 	}
 	return g
 }
@@ -116,8 +122,25 @@ func (g *Game) Update(dt float64) {
 
 	switch g.State {
 	case StateMenu:
+		if g.Input.IsJustPressed(glow.KeyUp) || g.Input.IsJustPressed(glow.KeyW) {
+			g.MenuSelection--
+			if g.MenuSelection < 0 {
+				g.MenuSelection = len(g.MenuOptions) - 1
+			}
+		}
+		if g.Input.IsJustPressed(glow.KeyDown) || g.Input.IsJustPressed(glow.KeyS) {
+			g.MenuSelection++
+			if g.MenuSelection >= len(g.MenuOptions) {
+				g.MenuSelection = 0
+			}
+		}
 		if g.Input.IsJustPressed(glow.KeyEnter) || g.Input.IsJustPressed(glow.KeySpace) {
-			g.StartGame()
+			switch g.MenuSelection {
+			case 0: // New Game
+				g.StartGame()
+			case 1: // Continue (loads save or starts new)
+				g.StartGame()
+			}
 		}
 	case StateLevelIntro:
 		g.LevelIntroTimer -= dt
@@ -534,120 +557,23 @@ func (g *Game) drawHUD(canvas *glow.Canvas) {
 }
 
 func (g *Game) drawMenu(canvas *glow.Canvas) {
-	cx := config.WindowWidth / 2
-
-	// Title
-	render.DrawTextCentered(canvas, "TANK STRIKE", cx, 150, render.ColorYellow, 4)
-
-	// Subtitle
-	render.DrawTextCentered(canvas, "A BATTLE CITY REMAKE", cx, 200, render.ColorGray, 2)
-
-	// Tank art (simple)
-	tankX := cx - 24
-	tankY := 260
-	canvas.DrawRect(tankX, tankY, 48, 48, render.ColorPlayerBody)
-	canvas.DrawRect(tankX+18, tankY-16, 12, 20, render.ColorPlayerTread)
-	canvas.FillCircle(tankX+24, tankY+24, 10, render.ColorPlayerDark)
-
-	// Menu option
-	if int(g.Time*2)%2 == 0 {
-		render.DrawTextCentered(canvas, "PRESS ENTER TO START", cx, 400, render.ColorWhite, 2)
-	}
-
-	// Controls info
-	render.DrawTextCentered(canvas, "WASD/ARROWS: MOVE", cx, 480, render.ColorGray, 1)
-	render.DrawTextCentered(canvas, "SPACE: SHOOT  ESC: PAUSE", cx, 496, render.ColorGray, 1)
+	render.DrawTitleScreen(canvas, g.MenuOptions, g.MenuSelection, g.Time)
 }
 
 func (g *Game) drawLevelIntro(canvas *glow.Canvas) {
-	cx := config.WindowWidth / 2
-	cy := config.WindowHeight / 2
-
-	// Grey background
-	canvas.DrawRect(0, 0, config.WindowWidth, config.WindowHeight, render.ColorDarkGray)
-
-	text := fmt.Sprintf("STAGE %d", g.Level+1)
-	render.DrawTextCentered(canvas, text, cx, cy-20, render.ColorWhite, 3)
+	render.DrawLevelIntro(canvas, g.Level)
 }
 
 func (g *Game) drawPauseOverlay(canvas *glow.Canvas) {
-	// Dithered checkerboard
-	for y := 0; y < config.WindowHeight; y += 2 {
-		for x := 0; x < config.WindowWidth; x += 2 {
-			canvas.SetPixel(x, y, render.ColorBlack)
-		}
-	}
-	cx := config.WindowWidth / 2
-	cy := config.WindowHeight / 2
-
-	canvas.DrawRect(cx-100, cy-30, 200, 60, render.ColorBlack)
-	render.DrawTextCentered(canvas, "PAUSED", cx, cy-12, render.ColorYellow, 3)
+	render.DrawPauseScreen(canvas, g.Time)
 }
 
 func (g *Game) drawGameOver(canvas *glow.Canvas) {
-	// Dithered overlay
-	for y := 0; y < config.WindowHeight; y += 2 {
-		for x := (y / 2) % 2; x < config.WindowWidth; x += 2 {
-			canvas.SetPixel(x, y, render.ColorBlack)
-		}
-	}
-	cx := config.WindowWidth / 2
-	cy := config.WindowHeight / 2
-
-	canvas.DrawRect(cx-120, cy-50, 240, 100, render.ColorBlack)
-	render.DrawTextCentered(canvas, "GAME OVER", cx, cy-30, render.ColorRed, 3)
-
-	scoreText := fmt.Sprintf("SCORE: %d", g.Player.Score)
-	render.DrawTextCentered(canvas, scoreText, cx, cy+5, render.ColorWhite, 2)
-
-	if g.GameOverTimer <= 0 && int(g.Time*2)%2 == 0 {
-		render.DrawTextCentered(canvas, "PRESS ENTER", cx, cy+35, render.ColorGray, 1)
-	}
+	render.DrawGameOverScreen(canvas, g.Player.Score, g.GameOverTimer <= 0, g.Time)
 }
 
 func (g *Game) drawLevelComplete(canvas *glow.Canvas) {
-	cx := config.WindowWidth / 2
-
-	// Dark overlay
-	canvas.DrawRect(cx-180, 80, 360, 500, render.ColorBlack)
-
-	y := 100
-	render.DrawTextCentered(canvas, "STAGE CLEAR!", cx, y, render.ColorPlayerBody, 3)
-	y += 40
-
-	scoreText := fmt.Sprintf("SCORE: %d", g.Player.Score)
-	render.DrawTextCentered(canvas, scoreText, cx, y, render.ColorYellow, 2)
-	y += 40
-
-	// Kill tally
-	render.DrawTextCentered(canvas, "- KILL TALLY -", cx, y, render.ColorWhite, 2)
-	y += 30
-
-	tallyX := cx - 100
-	drawTallyRow(canvas, tallyX, y, "BASIC", g.KillsBasic, config.ScoreBasic, render.ColorEnemyBasicBody)
-	y += 24
-	drawTallyRow(canvas, tallyX, y, "FAST", g.KillsFast, config.ScoreFast, render.ColorEnemyFastBody)
-	y += 24
-	drawTallyRow(canvas, tallyX, y, "POWER", g.KillsPower, config.ScorePower, render.ColorEnemyPowerBody)
-	y += 24
-	drawTallyRow(canvas, tallyX, y, "ARMOUR", g.KillsArmour, config.ScoreArmour, render.ColorEnemyArmourBody)
-	y += 36
-
-	total := g.KillsBasic + g.KillsFast + g.KillsPower + g.KillsArmour
-	totalText := fmt.Sprintf("TOTAL: %d", total)
-	render.DrawTextCentered(canvas, totalText, cx, y, render.ColorWhite, 2)
-
-	if g.LevelComplTimer <= 0 && int(g.Time*2)%2 == 0 {
-		render.DrawTextCentered(canvas, "PRESS ENTER", cx, y+40, render.ColorGray, 1)
-	}
-}
-
-func drawTallyRow(canvas *glow.Canvas, x, y int, name string, kills int, pts int, color glow.Color) {
-	// Colour indicator
-	canvas.DrawRect(x, y+2, 12, 10, color)
-	// Name
-	render.DrawText(canvas, name, x+18, y, render.ColorWhite, 1)
-	// Count and score
-	text := fmt.Sprintf("%2d x %3d = %5d", kills, pts, kills*pts)
-	render.DrawText(canvas, text, x+80, y, render.ColorYellow, 1)
+	render.DrawLevelComplete(canvas, g.Level, g.Player.Score,
+		g.KillsBasic, g.KillsFast, g.KillsPower, g.KillsArmour,
+		g.LevelComplTimer <= 0, g.Time)
 }
