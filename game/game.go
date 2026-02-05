@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/AchrafSoltani/TankStrike/audio"
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/entity"
 	"github.com/AchrafSoltani/TankStrike/render"
@@ -23,6 +24,7 @@ type Game struct {
 	PowerUps  []*entity.PowerUp
 	Particles *render.ParticlePool
 	Spawner   *system.Spawner
+	Audio     *audio.Engine
 	Level     int
 	Time      float64
 
@@ -56,6 +58,7 @@ func NewGame() *Game {
 		Input:     system.NewInput(),
 		Player:    entity.NewPlayerTank(),
 		Particles: render.NewParticlePool(),
+		Audio:     audio.NewEngine(),
 		Level:     0,
 		MenuOptions: []render.MenuOption{
 			{Label: "NEW GAME"},
@@ -90,6 +93,7 @@ func (g *Game) startLevel(index int) {
 		g.Player.Respawn()
 		g.State = StateLevelIntro
 		g.LevelIntroTimer = 2.0
+		g.Audio.PlayLevelStart()
 	}
 }
 
@@ -127,12 +131,14 @@ func (g *Game) Update(dt float64) {
 			if g.MenuSelection < 0 {
 				g.MenuSelection = len(g.MenuOptions) - 1
 			}
+			g.Audio.PlayMenuSelect()
 		}
 		if g.Input.IsJustPressed(glow.KeyDown) || g.Input.IsJustPressed(glow.KeyS) {
 			g.MenuSelection++
 			if g.MenuSelection >= len(g.MenuOptions) {
 				g.MenuSelection = 0
 			}
+			g.Audio.PlayMenuSelect()
 		}
 		if g.Input.IsJustPressed(glow.KeyEnter) || g.Input.IsJustPressed(glow.KeySpace) {
 			switch g.MenuSelection {
@@ -191,6 +197,7 @@ func (g *Game) updatePlaying(dt float64) {
 			bx, by := g.Player.Shoot()
 			bullet := entity.NewBullet(bx, by, g.Player.Dir, g.Player.BulletSpeed, g.Player.PowerLevel, true)
 			g.Bullets = append(g.Bullets, bullet)
+			g.Audio.PlayShoot()
 		}
 	}
 
@@ -244,6 +251,7 @@ func (g *Game) updatePlaying(dt float64) {
 				if destroyed {
 					g.Player.Score += e.ScoreValue
 					g.Particles.SpawnExplosion(e.CenterX(), e.CenterY(), 35)
+					g.Audio.PlayExplode()
 					g.trackKill(e.Type)
 					if e.HasPowerUp {
 						g.PowerUps = append(g.PowerUps, entity.NewPowerUp())
@@ -262,6 +270,7 @@ func (g *Game) updatePlaying(dt float64) {
 			if system.BulletTankCollision(b, &g.Player.Tank) {
 				b.Active = false
 				g.Particles.SpawnExplosion(g.Player.CenterX(), g.Player.CenterY(), 30)
+				g.Audio.PlayExplode()
 				g.Player.Die()
 			}
 		}
@@ -277,6 +286,7 @@ func (g *Game) updatePlaying(dt float64) {
 			if g.Player.X < p.X+24 && g.Player.X+float64(config.TankSize) > p.X &&
 				g.Player.Y < p.Y+24 && g.Player.Y+float64(config.TankSize) > p.Y {
 				p.Active = false
+				g.Audio.PlayPowerUp()
 				g.applyPowerUp(p.Type)
 			}
 		}
@@ -316,6 +326,7 @@ func (g *Game) updatePlaying(dt float64) {
 	if !g.Eagle.Alive || (g.Player.Lives <= 0 && !g.Player.Alive) {
 		g.State = StateGameOver
 		g.GameOverTimer = 2.0
+		g.Audio.PlayGameOver()
 	}
 
 	if g.Spawner.Done() && g.countAliveEnemies() == 0 {
