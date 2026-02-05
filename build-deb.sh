@@ -15,11 +15,6 @@ if ! command -v go &>/dev/null; then
     exit 1
 fi
 
-if ! dpkg -s libasound2-dev &>/dev/null 2>&1; then
-    echo "Error: libasound2-dev is required. Install with: sudo apt install libasound2-dev" >&2
-    exit 1
-fi
-
 # Check that glow is available alongside
 if [ ! -d "${SCRIPT_DIR}/../glow" ]; then
     echo "Error: glow must be cloned alongside TankStrike (expected at ../glow)" >&2
@@ -76,7 +71,7 @@ Version: ${VERSION}
 Section: games
 Priority: optional
 Architecture: ${ARCH}
-Depends: libasound2, libx11-6 | xwayland
+Depends: libx11-6 | xwayland
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Achraf Soltani <contact@achrafsoltani.me>
 Homepage: https://github.com/AchrafSoltani/TankStrike

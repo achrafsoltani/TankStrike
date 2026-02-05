@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/hajimehoshi/oto/v2"
+	"github.com/AchrafSoltani/glow"
 )
 
-// Engine manages audio playback using oto.
+// Engine manages audio playback using Glow's PulseAudio backend.
 type Engine struct {
-	ctx *oto.Context
+	ctx *glow.AudioContext
 
 	// Pre-generated sound buffers
 	shootBuf     []byte
@@ -22,12 +22,11 @@ type Engine struct {
 
 // NewEngine initialises the audio subsystem.
 func NewEngine() *Engine {
-	ctx, ready, err := oto.NewContext(sampleRate, 1, 2) // sampleRate, channelCount, bitDepthBytes
+	ctx, err := glow.NewAudioContext(sampleRate, 1, 2) // sampleRate, mono, 16-bit
 	if err != nil {
-		log.Printf("audio: failed to init oto: %v", err)
+		log.Printf("audio: failed to init audio: %v", err)
 		return &Engine{}
 	}
-	<-ready
 
 	e := &Engine{
 		ctx:         ctx,
