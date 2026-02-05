@@ -22,10 +22,15 @@ type Game struct {
 	Eagle     *entity.Eagle
 	Enemies   []*entity.EnemyTank
 	Bullets   []*entity.Bullet
+	PowerUps  []*entity.PowerUp
 	Particles *render.ParticlePool
 	Spawner   *system.Spawner
 	Level     int
 	Time      float64
+
+	// Power-up timers
+	ClockTimer  float64 // freeze enemies timer
+	ShovelTimer float64 // fortified eagle timer
 
 	// Transition timers
 	GameOverTimer   float64
@@ -61,6 +66,9 @@ func (g *Game) startLevel(index int) {
 		world.LoadLevel(g.Grid, world.Levels[index])
 		g.Bullets = g.Bullets[:0]
 		g.Enemies = g.Enemies[:0]
+		g.PowerUps = g.PowerUps[:0]
+		g.ClockTimer = 0
+		g.ShovelTimer = 0
 		g.Spawner = system.NewSpawner(index)
 		g.findEagle()
 		g.Player.Respawn()
@@ -158,8 +166,13 @@ func (g *Game) updatePlaying(dt float64) {
 	}
 
 	eagleCX, eagleCY := g.Eagle.CenterX(), g.Eagle.CenterY()
+	frozen := g.ClockTimer > 0
 	for _, e := range g.Enemies {
 		if !e.Alive {
+			continue
+		}
+		if frozen {
+			e.UpdateEnemy(dt) // still animate flash, but don't move/shoot
 			continue
 		}
 		others := g.tankBBoxesExcluding(&e.Tank)
@@ -198,6 +211,9 @@ func (g *Game) updatePlaying(dt float64) {
 				if destroyed {
 					g.Player.Score += e.ScoreValue
 					g.Particles.SpawnExplosion(e.CenterX(), e.CenterY(), 35)
+					if e.HasPowerUp {
+						g.PowerUps = append(g.PowerUps, entity.NewPowerUp())
+					}
 				}
 				break
 			}
@@ -216,6 +232,42 @@ func (g *Game) updatePlaying(dt float64) {
 			}
 		}
 	}
+
+	// Power-up collection
+	if g.Player.Alive {
+		for _, p := range g.PowerUps {
+			if !p.Active {
+				continue
+			}
+			// Simple AABB overlap between player and power-up
+			if g.Player.X < p.X+24 && g.Player.X+float64(config.TankSize) > p.X &&
+				g.Player.Y < p.Y+24 && g.Player.Y+float64(config.TankSize) > p.Y {
+				p.Active = false
+				g.applyPowerUp(p.Type)
+			}
+		}
+	}
+
+	// Update power-ups
+	for _, p := range g.PowerUps {
+		p.Update(dt)
+	}
+
+	// Clock timer (freeze enemies)
+	if g.ClockTimer > 0 {
+		g.ClockTimer -= dt
+	}
+
+	// Shovel timer (fortification)
+	if g.ShovelTimer > 0 {
+		g.ShovelTimer -= dt
+		if g.ShovelTimer <= 0 {
+			g.unfortifyEagle()
+		}
+	}
+
+	// Clean up power-ups
+	g.cleanPowerUps()
 
 	if g.Eagle != nil {
 		for y := 0; y < config.GridHeight; y++ {
@@ -294,6 +346,84 @@ func (g *Game) cleanBullets() {
 	g.Bullets = g.Bullets[:n]
 }
 
+func (g *Game) cleanPowerUps() {
+	n := 0
+	for _, p := range g.PowerUps {
+		if p.Active {
+			g.PowerUps[n] = p
+			n++
+		}
+	}
+	g.PowerUps = g.PowerUps[:n]
+}
+
+func (g *Game) applyPowerUp(typ entity.PowerUpType) {
+	switch typ {
+	case entity.PowerUpStar:
+		g.Player.ApplyStar()
+	case entity.PowerUpTank:
+		g.Player.Lives++
+	case entity.PowerUpHelmet:
+		g.Player.ShieldTimer = config.PowerUpDuration
+	case entity.PowerUpShovel:
+		g.fortifyEagle()
+		g.ShovelTimer = config.PowerUpDuration
+	case entity.PowerUpBomb:
+		for _, e := range g.Enemies {
+			if e.Alive {
+				e.Alive = false
+				g.Player.Score += e.ScoreValue
+				g.Particles.SpawnExplosion(e.CenterX(), e.CenterY(), 25)
+			}
+		}
+	case entity.PowerUpClock:
+		g.ClockTimer = config.PowerUpDuration
+	}
+	g.Player.Score += 500
+}
+
+func (g *Game) fortifyEagle() {
+	if g.Eagle == nil {
+		return
+	}
+	// Replace brick around eagle with steel
+	ex := int(g.Eagle.X) / config.SubBlock
+	ey := int(g.Eagle.Y) / config.SubBlock
+	for dy := -1; dy <= 2; dy++ {
+		for dx := -1; dx <= 2; dx++ {
+			gx, gy := ex+dx, ey+dy
+			tile := g.Grid.Get(gx, gy)
+			if tile == world.TileBrick || tile == world.TileEmpty {
+				// Only fortify the border cells
+				if dx == -1 || dx == 2 || dy == -1 || dy == 2 {
+					g.Grid.Set(gx, gy, world.TileSteel)
+				}
+			}
+		}
+	}
+	g.Eagle.Fortified = true
+}
+
+func (g *Game) unfortifyEagle() {
+	if g.Eagle == nil {
+		return
+	}
+	ex := int(g.Eagle.X) / config.SubBlock
+	ey := int(g.Eagle.Y) / config.SubBlock
+	for dy := -1; dy <= 2; dy++ {
+		for dx := -1; dx <= 2; dx++ {
+			gx, gy := ex+dx, ey+dy
+			tile := g.Grid.Get(gx, gy)
+			if tile == world.TileSteel {
+				if dx == -1 || dx == 2 || dy == -1 || dy == 2 {
+					g.Grid.Set(gx, gy, world.TileBrick)
+				}
+			}
+		}
+	}
+	g.Eagle.Fortified = false
+}
+
 func (g *Game) cleanEnemies() {
 	n := 0
 	for _, e := range g.Enemies {
@@ -363,6 +493,11 @@ func (g *Game) drawPlayField(canvas *glow.Canvas) {
 
 	for _, b := range g.Bullets {
 		render.DrawBullet(canvas, b, config.Padding, config.Padding)
+	}
+
+	// Power-ups
+	for _, p := range g.PowerUps {
+		render.DrawPowerUp(canvas, p, config.Padding, config.Padding)
 	}
 
 	g.Particles.Draw(canvas, config.Padding, config.Padding)
