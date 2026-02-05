@@ -1,3 +1,7 @@
 TankStrike
+tankstrike
 *.exe
 *.out
+*.deb
+*.ppm
+tankstrike_*/
