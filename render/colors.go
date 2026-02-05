@@ -45,17 +45,17 @@ var (
 	ColorPlayerDark  = glow.RGB(0, 80, 0)
 
 	// Enemy tanks
-	ColorEnemyBasicBody  = glow.RGB(170, 170, 170)
-	ColorEnemyBasicTread = glow.RGB(120, 120, 120)
+	ColorEnemyBasicBody  = glow.RGB(190, 190, 190)
+	ColorEnemyBasicTread = glow.RGB(130, 130, 130)
 
-	ColorEnemyFastBody  = glow.RGB(220, 200, 50)
-	ColorEnemyFastTread = glow.RGB(170, 150, 30)
+	ColorEnemyFastBody  = glow.RGB(255, 220, 0)
+	ColorEnemyFastTread = glow.RGB(200, 170, 0)
 
-	ColorEnemyPowerBody  = glow.RGB(220, 100, 120)
-	ColorEnemyPowerTread = glow.RGB(170, 70, 90)
+	ColorEnemyPowerBody  = glow.RGB(255, 60, 100)
+	ColorEnemyPowerTread = glow.RGB(200, 40, 70)
 
-	ColorEnemyArmourBody  = glow.RGB(0, 130, 60)
-	ColorEnemyArmourTread = glow.RGB(0, 90, 40)
+	ColorEnemyArmourBody  = glow.RGB(0, 180, 100)
+	ColorEnemyArmourTread = glow.RGB(0, 130, 70)
 
 	// Bullets
 	ColorBulletPlayer = glow.RGB(255, 255, 200)

@@ -16,10 +16,10 @@ type TankColors struct {
 var (
 	PlayerColors = TankColors{ColorPlayerBody, ColorPlayerTread, ColorPlayerDark}
 
-	EnemyBasicColors  = TankColors{ColorEnemyBasicBody, ColorEnemyBasicTread, ColorDarkGray}
-	EnemyFastColors   = TankColors{ColorEnemyFastBody, ColorEnemyFastTread, glow.RGB(130, 115, 20)}
-	EnemyPowerColors  = TankColors{ColorEnemyPowerBody, ColorEnemyPowerTread, glow.RGB(140, 50, 60)}
-	EnemyArmourColors = TankColors{ColorEnemyArmourBody, ColorEnemyArmourTread, glow.RGB(0, 60, 30)}
+	EnemyBasicColors  = TankColors{ColorEnemyBasicBody, ColorEnemyBasicTread, glow.RGB(120, 120, 120)}
+	EnemyFastColors   = TankColors{ColorEnemyFastBody, ColorEnemyFastTread, glow.RGB(180, 150, 0)}
+	EnemyPowerColors  = TankColors{ColorEnemyPowerBody, ColorEnemyPowerTread, glow.RGB(180, 30, 60)}
+	EnemyArmourColors = TankColors{ColorEnemyArmourBody, ColorEnemyArmourTread, glow.RGB(0, 120, 60)}
 )
 
 // DrawTank draws a tank at its position with the given colour scheme.
