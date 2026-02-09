@@ -110,7 +110,7 @@ func (pp *ParticlePool) Update(dt float64) {
 }
 
 // Draw renders all active particles.
-func (pp *ParticlePool) Draw(canvas *glow.Canvas, offsetX, offsetY int) {
+func (pp *ParticlePool) Draw(canvas *ScaledCanvas, offsetX, offsetY int) {
 	for i := range pp.Particles {
 		p := &pp.Particles[i]
 		if !p.Active {

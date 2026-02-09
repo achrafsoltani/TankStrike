@@ -5,11 +5,10 @@ import (
 
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/world"
-	"github.com/AchrafSoltani/glow"
 )
 
 // DrawTile draws a single tile at the given sub-block position.
-func DrawTile(canvas *glow.Canvas, t world.TileType, sx, sy int, offsetX, offsetY int, time float64) {
+func DrawTile(canvas *ScaledCanvas, t world.TileType, sx, sy int, offsetX, offsetY int, time float64) {
 	px := offsetX + sx*config.SubBlock
 	py := offsetY + sy*config.SubBlock
 	s := config.SubBlock
@@ -31,7 +30,7 @@ func DrawTile(canvas *glow.Canvas, t world.TileType, sx, sy int, offsetX, offset
 }
 
 // DrawForestOverlay draws forest tiles as an overlay (after tanks).
-func DrawForestOverlay(canvas *glow.Canvas, g *world.Grid, offsetX, offsetY int) {
+func DrawForestOverlay(canvas *ScaledCanvas, g *world.Grid, offsetX, offsetY int) {
 	for y := 0; y < config.GridHeight; y++ {
 		for x := 0; x < config.GridWidth; x++ {
 			if g.Get(x, y) == world.TileForest {
@@ -41,7 +40,7 @@ func DrawForestOverlay(canvas *glow.Canvas, g *world.Grid, offsetX, offsetY int)
 	}
 }
 
-func drawBrick(canvas *glow.Canvas, px, py, s int) {
+func drawBrick(canvas *ScaledCanvas, px, py, s int) {
 	canvas.DrawRect(px, py, s, s, ColorBrick)
 	for row := 0; row < 4; row++ {
 		my := py + row*6
@@ -64,7 +63,7 @@ func drawBrick(canvas *glow.Canvas, px, py, s int) {
 	canvas.DrawRect(px+13, py+7, 3, 2, ColorBrickLight)
 }
 
-func drawSteel(canvas *glow.Canvas, px, py, s int) {
+func drawSteel(canvas *ScaledCanvas, px, py, s int) {
 	canvas.DrawRect(px, py, s, s, ColorSteel)
 	canvas.DrawRect(px, py, s, 2, ColorSteelLight)
 	canvas.DrawRect(px, py, 2, s, ColorSteelLight)
@@ -77,7 +76,7 @@ func drawSteel(canvas *glow.Canvas, px, py, s int) {
 	canvas.DrawRect(px+s-5, py+s-5, rivetSize, rivetSize, ColorSteelRivet)
 }
 
-func drawWater(canvas *glow.Canvas, px, py, s int, time float64) {
+func drawWater(canvas *ScaledCanvas, px, py, s int, time float64) {
 	canvas.DrawRect(px, py, s, s, ColorWater)
 	for row := 0; row < s; row += 4 {
 		offset := int(math.Sin(float64(row)/4.0+time*3.0) * 3)
@@ -95,7 +94,7 @@ func drawWater(canvas *glow.Canvas, px, py, s int, time float64) {
 	}
 }
 
-func drawIce(canvas *glow.Canvas, px, py, s int) {
+func drawIce(canvas *ScaledCanvas, px, py, s int) {
 	canvas.DrawRect(px, py, s, s, ColorIce)
 	for i := 0; i < s; i += 8 {
 		gx := px + i
@@ -113,7 +112,7 @@ func drawIce(canvas *glow.Canvas, px, py, s int) {
 	}
 }
 
-func drawForest(canvas *glow.Canvas, px, py, s int) {
+func drawForest(canvas *ScaledCanvas, px, py, s int) {
 	canvas.DrawRect(px, py+2, s, s-4, ColorForest1)
 	canvas.DrawRect(px+2, py, s-4, s, ColorForest2)
 	canvas.DrawRect(px+4, py+4, s-8, s-8, ColorForest3)
@@ -121,7 +120,7 @@ func drawForest(canvas *glow.Canvas, px, py, s int) {
 	canvas.DrawRect(px+s-8, py+s-8, 6, 6, ColorForest1)
 }
 
-func drawEagle(canvas *glow.Canvas, px, py, s int) {
+func drawEagle(canvas *ScaledCanvas, px, py, s int) {
 	canvas.DrawRect(px+4, py+4, s-8, s-8, ColorEagleBody)
 	canvas.DrawRect(px+1, py+8, 4, s-16, ColorEagleWing)
 	canvas.DrawRect(px+s-5, py+8, 4, s-16, ColorEagleWing)
@@ -129,7 +128,7 @@ func drawEagle(canvas *glow.Canvas, px, py, s int) {
 	canvas.DrawRect(px+s/2-1, py+5, 2, 2, ColorBlack)
 }
 
-func drawEagleDead(canvas *glow.Canvas, px, py, s int) {
+func drawEagleDead(canvas *ScaledCanvas, px, py, s int) {
 	canvas.DrawRect(px+2, py+s-8, 6, 6, ColorEagleDead)
 	canvas.DrawRect(px+10, py+s-6, 5, 4, ColorEagleDead)
 	canvas.DrawRect(px+s-10, py+s-10, 7, 8, ColorEagleDead)

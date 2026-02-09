@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/AchrafSoltani/TankStrike/config"
-	"github.com/AchrafSoltani/glow"
 )
 
 // HUDRenderer draws the sidebar HUD.
@@ -20,7 +19,7 @@ func NewHUDRenderer() *HUDRenderer {
 }
 
 // DrawHUD draws the complete HUD sidebar.
-func (h *HUDRenderer) DrawHUD(canvas *glow.Canvas, enemiesRemaining int, lives int, level int, score int) {
+func (h *HUDRenderer) DrawHUD(canvas *ScaledCanvas, enemiesRemaining int, lives int, level int, score int) {
 	// Background
 	canvas.DrawRect(h.X, 0, config.HUDWidth, config.WindowHeight, ColorHUDBG)
 
@@ -69,12 +68,12 @@ func (h *HUDRenderer) DrawHUD(canvas *glow.Canvas, enemiesRemaining int, lives i
 	DrawText(canvas, fmt.Sprintf("  %2d", level+1), x+8, y+14, ColorYellow, 1)
 }
 
-func drawEnemyIcon(canvas *glow.Canvas, x, y int) {
+func drawEnemyIcon(canvas *ScaledCanvas, x, y int) {
 	canvas.DrawRect(x, y, 12, 10, ColorHUDEnemyIcon)
 	canvas.DrawRect(x+4, y-2, 4, 3, ColorHUDEnemyIcon) // barrel
 }
 
-func drawPlayerIcon(canvas *glow.Canvas, x, y int) {
+func drawPlayerIcon(canvas *ScaledCanvas, x, y int) {
 	canvas.DrawRect(x, y, 12, 14, ColorPlayerBody)
 	canvas.DrawRect(x+4, y-2, 4, 4, ColorPlayerTread) // barrel
 }

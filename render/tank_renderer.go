@@ -23,7 +23,7 @@ var (
 )
 
 // DrawTank draws a tank at its position with the given colour scheme.
-func DrawTank(canvas *glow.Canvas, t *entity.Tank, colors TankColors, offsetX, offsetY int) {
+func DrawTank(canvas *ScaledCanvas, t *entity.Tank, colors TankColors, offsetX, offsetY int) {
 	if !t.Alive {
 		return
 	}
@@ -45,7 +45,7 @@ func DrawTank(canvas *glow.Canvas, t *entity.Tank, colors TankColors, offsetX, o
 	}
 }
 
-func drawTankVertical(canvas *glow.Canvas, cx, cy, bodyHalf int, t *entity.Tank, colors TankColors) {
+func drawTankVertical(canvas *ScaledCanvas, cx, cy, bodyHalf int, t *entity.Tank, colors TankColors) {
 	bw := config.TreadWidth
 	bl := config.TreadLength
 
@@ -77,7 +77,7 @@ func drawTankVertical(canvas *glow.Canvas, cx, cy, bodyHalf int, t *entity.Tank,
 	}
 }
 
-func drawTankHorizontal(canvas *glow.Canvas, cx, cy, bodyHalf int, t *entity.Tank, colors TankColors) {
+func drawTankHorizontal(canvas *ScaledCanvas, cx, cy, bodyHalf int, t *entity.Tank, colors TankColors) {
 	bw := config.TreadWidth
 	bl := config.TreadLength
 
@@ -109,7 +109,7 @@ func drawTankHorizontal(canvas *glow.Canvas, cx, cy, bodyHalf int, t *entity.Tan
 	}
 }
 
-func drawTread(canvas *glow.Canvas, x, y, w, h int, vertical bool, frame int, colors TankColors) {
+func drawTread(canvas *ScaledCanvas, x, y, w, h int, vertical bool, frame int, colors TankColors) {
 	canvas.DrawRect(x, y, w, h, colors.Tread)
 
 	// Alternating dark/light strips for animation
@@ -135,7 +135,7 @@ func drawTread(canvas *glow.Canvas, x, y, w, h int, vertical bool, frame int, co
 }
 
 // DrawShield draws the invulnerability shield around a tank.
-func DrawShield(canvas *glow.Canvas, t *entity.Tank, offsetX, offsetY int, time float64) {
+func DrawShield(canvas *ScaledCanvas, t *entity.Tank, offsetX, offsetY int, time float64) {
 	cx := int(t.X) + offsetX + config.TankSize/2
 	cy := int(t.Y) + offsetY + config.TankSize/2
 

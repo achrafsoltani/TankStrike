@@ -4,7 +4,7 @@ import "github.com/AchrafSoltani/glow"
 
 // DrawText renders text at (x, y) with the given colour and scale.
 // Each character is 8x8 pixels at scale 1.
-func DrawText(canvas *glow.Canvas, text string, x, y int, color glow.Color, scale int) {
+func DrawText(canvas *ScaledCanvas, text string, x, y int, color glow.Color, scale int) {
 	cx := x
 	for _, ch := range text {
 		if ch == '\n' {
@@ -18,13 +18,13 @@ func DrawText(canvas *glow.Canvas, text string, x, y int, color glow.Color, scal
 }
 
 // DrawTextCentered renders text centred horizontally at y.
-func DrawTextCentered(canvas *glow.Canvas, text string, centerX, y int, color glow.Color, scale int) {
+func DrawTextCentered(canvas *ScaledCanvas, text string, centerX, y int, color glow.Color, scale int) {
 	w := len(text) * 8 * scale
 	x := centerX - w/2
 	DrawText(canvas, text, x, y, color, scale)
 }
 
-func drawChar(canvas *glow.Canvas, ch rune, x, y int, color glow.Color, scale int) {
+func drawChar(canvas *ScaledCanvas, ch rune, x, y int, color glow.Color, scale int) {
 	idx := int(ch) - 0x20
 	if idx < 0 || idx >= len(FontData) {
 		return

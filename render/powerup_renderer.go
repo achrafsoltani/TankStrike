@@ -2,11 +2,10 @@ package render
 
 import (
 	"github.com/AchrafSoltani/TankStrike/entity"
-	"github.com/AchrafSoltani/glow"
 )
 
 // DrawPowerUp renders a power-up.
-func DrawPowerUp(canvas *glow.Canvas, p *entity.PowerUp, offsetX, offsetY int) {
+func DrawPowerUp(canvas *ScaledCanvas, p *entity.PowerUp, offsetX, offsetY int) {
 	if !p.Active || !p.IsVisible() {
 		return
 	}
@@ -36,7 +35,7 @@ func DrawPowerUp(canvas *glow.Canvas, p *entity.PowerUp, offsetX, offsetY int) {
 	}
 }
 
-func drawStarIcon(canvas *glow.Canvas, px, py, size int) {
+func drawStarIcon(canvas *ScaledCanvas, px, py, size int) {
 	cx := px + size/2
 	cy := py + size/2
 	// Simple star shape
@@ -45,29 +44,29 @@ func drawStarIcon(canvas *glow.Canvas, px, py, size int) {
 	canvas.DrawRect(cx-4, cy-4, 8, 8, ColorPowerUpStar)
 }
 
-func drawTankIcon(canvas *glow.Canvas, px, py, _ int) {
+func drawTankIcon(canvas *ScaledCanvas, px, py, _ int) {
 	canvas.DrawRect(px+4, py+6, 16, 14, ColorPowerUpTank)
 	canvas.DrawRect(px+9, py+2, 6, 6, ColorPowerUpTank)
 }
 
-func drawHelmetIcon(canvas *glow.Canvas, px, py, size int) {
+func drawHelmetIcon(canvas *ScaledCanvas, px, py, size int) {
 	cx := px + size/2
 	canvas.FillCircle(cx, py+10, 8, ColorPowerUpHelmet)
 	canvas.DrawRect(px+4, py+12, 16, 6, ColorPowerUpHelmet)
 }
 
-func drawShovelIcon(canvas *glow.Canvas, px, py, _ int) {
+func drawShovelIcon(canvas *ScaledCanvas, px, py, _ int) {
 	canvas.DrawRect(px+10, py+2, 4, 14, ColorPowerUpShovel)
 	canvas.DrawRect(px+6, py+16, 12, 4, ColorPowerUpShovel)
 }
 
-func drawBombIcon(canvas *glow.Canvas, px, py, size int) {
+func drawBombIcon(canvas *ScaledCanvas, px, py, size int) {
 	cx := px + size/2
 	canvas.FillCircle(cx, py+14, 7, ColorPowerUpBomb)
 	canvas.DrawRect(cx-1, py+3, 2, 6, ColorPowerUpBomb)
 }
 
-func drawClockIcon(canvas *glow.Canvas, px, py, size int) {
+func drawClockIcon(canvas *ScaledCanvas, px, py, size int) {
 	cx := px + size/2
 	cy := py + size/2
 	canvas.DrawCircle(cx, cy, 9, ColorPowerUpClock)

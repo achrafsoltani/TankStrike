@@ -3,11 +3,10 @@ package render
 import (
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/entity"
-	"github.com/AchrafSoltani/glow"
 )
 
 // DrawBullet draws a bullet with its trail.
-func DrawBullet(canvas *glow.Canvas, b *entity.Bullet, offsetX, offsetY int) {
+func DrawBullet(canvas *ScaledCanvas, b *entity.Bullet, offsetX, offsetY int) {
 	if !b.Active {
 		return
 	}

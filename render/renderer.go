@@ -3,7 +3,6 @@ package render
 import (
 	"github.com/AchrafSoltani/TankStrike/config"
 	"github.com/AchrafSoltani/TankStrike/world"
-	"github.com/AchrafSoltani/glow"
 )
 
 // Renderer handles all drawing operations.
@@ -22,7 +21,7 @@ func NewRenderer() *Renderer {
 }
 
 // DrawGrid draws all non-overlay tiles.
-func (r *Renderer) DrawGrid(canvas *glow.Canvas, g *world.Grid) {
+func (r *Renderer) DrawGrid(canvas *ScaledCanvas, g *world.Grid) {
 	for y := 0; y < config.GridHeight; y++ {
 		for x := 0; x < config.GridWidth; x++ {
 			t := g.Get(x, y)
@@ -34,12 +33,12 @@ func (r *Renderer) DrawGrid(canvas *glow.Canvas, g *world.Grid) {
 }
 
 // DrawForest draws forest overlay tiles (above tanks).
-func (r *Renderer) DrawForest(canvas *glow.Canvas, g *world.Grid) {
+func (r *Renderer) DrawForest(canvas *ScaledCanvas, g *world.Grid) {
 	DrawForestOverlay(canvas, g, r.OffsetX, r.OffsetY)
 }
 
 // DrawPlayAreaBorder draws the border around the play area.
-func (r *Renderer) DrawPlayAreaBorder(canvas *glow.Canvas) {
+func (r *Renderer) DrawPlayAreaBorder(canvas *ScaledCanvas) {
 	hudX := r.OffsetX + config.PlayAreaWidth + config.Padding
 	canvas.DrawRect(hudX, 0, config.HUDWidth, config.WindowHeight, ColorHUDBG)
 }

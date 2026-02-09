@@ -13,7 +13,7 @@ type MenuOption struct {
 }
 
 // DrawTitleScreen renders the main menu title screen.
-func DrawTitleScreen(canvas *glow.Canvas, options []MenuOption, selected int, time float64) {
+func DrawTitleScreen(canvas *ScaledCanvas, options []MenuOption, selected int, time float64) {
 	cx := config.WindowWidth / 2
 
 	// Background
@@ -53,7 +53,7 @@ func DrawTitleScreen(canvas *glow.Canvas, options []MenuOption, selected int, ti
 	DrawTextCentered(canvas, "MADE WITH GLOW ENGINE", cx, config.WindowHeight-44, ColorDarkGray, 1)
 }
 
-func drawMenuTankArt(canvas *glow.Canvas, x, y int) {
+func drawMenuTankArt(canvas *ScaledCanvas, x, y int) {
 	// Player tank (large)
 	canvas.DrawRect(x+60, y, 48, 48, ColorPlayerBody)
 	canvas.DrawRect(x+78, y-16, 12, 20, ColorPlayerTread)
@@ -69,7 +69,7 @@ func drawMenuTankArt(canvas *glow.Canvas, x, y int) {
 }
 
 // DrawPauseScreen renders the pause overlay.
-func DrawPauseScreen(canvas *glow.Canvas, time float64) {
+func DrawPauseScreen(canvas *ScaledCanvas, time float64) {
 	// Dithered checkerboard
 	for y := 0; y < config.WindowHeight; y += 2 {
 		for x := 0; x < config.WindowWidth; x += 2 {
@@ -92,7 +92,7 @@ func DrawPauseScreen(canvas *glow.Canvas, time float64) {
 }
 
 // DrawGameOverScreen renders the game over screen.
-func DrawGameOverScreen(canvas *glow.Canvas, score int, canContinue bool, time float64) {
+func DrawGameOverScreen(canvas *ScaledCanvas, score int, canContinue bool, time float64) {
 	// Dithered overlay
 	for y := 0; y < config.WindowHeight; y += 2 {
 		for x := (y / 2) % 2; x < config.WindowWidth; x += 2 {
@@ -118,7 +118,7 @@ func DrawGameOverScreen(canvas *glow.Canvas, score int, canContinue bool, time f
 }
 
 // DrawLevelIntro renders the level introduction screen.
-func DrawLevelIntro(canvas *glow.Canvas, level int) {
+func DrawLevelIntro(canvas *ScaledCanvas, level int) {
 	canvas.Clear(glow.RGB(40, 40, 40))
 
 	cx := config.WindowWidth / 2
@@ -133,7 +133,7 @@ func DrawLevelIntro(canvas *glow.Canvas, level int) {
 }
 
 // DrawLevelComplete renders the level complete tally.
-func DrawLevelComplete(canvas *glow.Canvas, level int, score int,
+func DrawLevelComplete(canvas *ScaledCanvas, level int, score int,
 	killsBasic, killsFast, killsPower, killsArmour int,
 	canContinue bool, time float64) {
 	cx := config.WindowWidth / 2
@@ -186,7 +186,7 @@ func DrawLevelComplete(canvas *glow.Canvas, level int, score int,
 	}
 }
 
-func drawTallyLine(canvas *glow.Canvas, x, y int, name string, kills, ptsEach int, color glow.Color) {
+func drawTallyLine(canvas *ScaledCanvas, x, y int, name string, kills, ptsEach int, color glow.Color) {
 	canvas.DrawRect(x, y+2, 10, 8, color)
 	DrawText(canvas, name, x+16, y, ColorWhite, 1)
 	DrawText(canvas, fmt.Sprintf("%2d", kills), x+88, y, ColorYellow, 1)
