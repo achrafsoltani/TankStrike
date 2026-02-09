@@ -28,6 +28,7 @@ type Game struct {
 	Audio     *audio.Engine
 	Shake     *system.ScreenShake
 	SaveData  *save.SaveData
+	Layout    config.Layout
 	Level     int
 	Time      float64
 
@@ -64,6 +65,7 @@ func NewGame() *Game {
 		Audio:     audio.NewEngine(),
 		Shake:     &system.ScreenShake{},
 		SaveData:  save.Load(),
+		Layout:    config.NewLayout(config.WindowWidth, config.WindowHeight),
 		Level:     0,
 		MenuOptions: []render.MenuOption{
 			{Label: "NEW GAME"},
@@ -121,6 +123,11 @@ func (g *Game) KeyDown(key glow.Key) {
 // KeyUp handles key release events.
 func (g *Game) KeyUp(key glow.Key) {
 	g.Input.KeyUp(key)
+}
+
+// OnResize recalculates the layout for a new window size.
+func (g *Game) OnResize(width, height int) {
+	g.Layout = config.NewLayout(width, height)
 }
 
 // Update advances game state by dt seconds.
@@ -529,29 +536,31 @@ func enemyColors(typ entity.EnemyType) render.TankColors {
 
 // Draw renders the current game state.
 func (g *Game) Draw(canvas *glow.Canvas) {
+	sc := render.NewScaledCanvas(canvas, g.Layout)
+
 	switch g.State {
 	case StateMenu:
-		g.drawMenu(canvas)
+		g.drawMenu(sc)
 	case StateLevelIntro:
-		g.drawLevelIntro(canvas)
+		g.drawLevelIntro(sc)
 	case StatePlaying, StatePaused:
-		g.drawPlayField(canvas)
-		g.drawHUD(canvas)
+		g.drawPlayField(sc)
+		g.drawHUD(sc)
 		if g.State == StatePaused {
-			g.drawPauseOverlay(canvas)
+			g.drawPauseOverlay(sc)
 		}
 	case StateGameOver:
-		g.drawPlayField(canvas)
-		g.drawHUD(canvas)
-		g.drawGameOver(canvas)
+		g.drawPlayField(sc)
+		g.drawHUD(sc)
+		g.drawGameOver(sc)
 	case StateLevelComplete:
-		g.drawPlayField(canvas)
-		g.drawHUD(canvas)
-		g.drawLevelComplete(canvas)
+		g.drawPlayField(sc)
+		g.drawHUD(sc)
+		g.drawLevelComplete(sc)
 	}
 }
 
-func (g *Game) drawPlayField(canvas *glow.Canvas) {
+func (g *Game) drawPlayField(canvas *render.ScaledCanvas) {
 	ox := config.Padding + g.Shake.OffsetX
 	oy := config.Padding + g.Shake.OffsetY
 
@@ -591,28 +600,28 @@ func (g *Game) drawPlayField(canvas *glow.Canvas) {
 	g.Renderer.OffsetY = config.Padding
 }
 
-func (g *Game) drawHUD(canvas *glow.Canvas) {
+func (g *Game) drawHUD(canvas *render.ScaledCanvas) {
 	remaining := g.Spawner.Remaining() + g.countAliveEnemies()
 	g.HUD.DrawHUD(canvas, remaining, g.Player.Lives, g.Level, g.Player.Score)
 }
 
-func (g *Game) drawMenu(canvas *glow.Canvas) {
+func (g *Game) drawMenu(canvas *render.ScaledCanvas) {
 	render.DrawTitleScreen(canvas, g.MenuOptions, g.MenuSelection, g.Time)
 }
 
-func (g *Game) drawLevelIntro(canvas *glow.Canvas) {
+func (g *Game) drawLevelIntro(canvas *render.ScaledCanvas) {
 	render.DrawLevelIntro(canvas, g.Level)
 }
 
-func (g *Game) drawPauseOverlay(canvas *glow.Canvas) {
+func (g *Game) drawPauseOverlay(canvas *render.ScaledCanvas) {
 	render.DrawPauseScreen(canvas, g.Time)
 }
 
-func (g *Game) drawGameOver(canvas *glow.Canvas) {
+func (g *Game) drawGameOver(canvas *render.ScaledCanvas) {
 	render.DrawGameOverScreen(canvas, g.Player.Score, g.GameOverTimer <= 0, g.Time)
 }
 
-func (g *Game) drawLevelComplete(canvas *glow.Canvas) {
+func (g *Game) drawLevelComplete(canvas *render.ScaledCanvas) {
 	render.DrawLevelComplete(canvas, g.Level, g.Player.Score,
 		g.KillsBasic, g.KillsFast, g.KillsPower, g.KillsArmour,
 		g.LevelComplTimer <= 0, g.Time)

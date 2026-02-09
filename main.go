@@ -42,6 +42,8 @@ func main() {
 				g.KeyDown(event.Key)
 			case glow.EventKeyUp:
 				g.KeyUp(event.Key)
+			case glow.EventWindowResize:
+				g.OnResize(event.Width, event.Height)
 			}
 		}
 
