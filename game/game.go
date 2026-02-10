@@ -54,6 +54,7 @@ type Game struct {
 
 // NewGame creates a new game instance.
 func NewGame() *Game {
+	sd := save.Load()
 	g := &Game{
 		State:     StateMenu,
 		Grid:      world.NewGrid(),
@@ -64,12 +65,12 @@ func NewGame() *Game {
 		Particles: render.NewParticlePool(),
 		Audio:     audio.NewEngine(),
 		Shake:     &system.ScreenShake{},
-		SaveData:  save.Load(),
+		SaveData:  sd,
 		Layout:    config.NewLayout(config.WindowWidth, config.WindowHeight),
 		Level:     0,
 		MenuOptions: []render.MenuOption{
 			{Label: "NEW GAME"},
-			{Label: "CONTINUE"},
+			{Label: "CONTINUE", Disabled: sd.MaxLevel == 0},
 		},
 	}
 	return g
@@ -80,6 +81,19 @@ func (g *Game) StartGame() {
 	g.Player = entity.NewPlayerTank()
 	g.Level = 0
 	g.startLevel(0)
+}
+
+// ContinueGame resumes from the saved level.
+func (g *Game) ContinueGame() {
+	g.Player = entity.NewPlayerTank()
+	level := g.SaveData.MaxLevel
+	if level < 0 {
+		level = 0
+	}
+	if level >= len(world.Levels) {
+		level = len(world.Levels) - 1
+	}
+	g.startLevel(level)
 }
 
 func (g *Game) startLevel(index int) {
@@ -143,6 +157,13 @@ func (g *Game) Update(dt float64) {
 			if g.MenuSelection < 0 {
 				g.MenuSelection = len(g.MenuOptions) - 1
 			}
+			// Skip disabled options
+			if g.MenuOptions[g.MenuSelection].Disabled {
+				g.MenuSelection--
+				if g.MenuSelection < 0 {
+					g.MenuSelection = len(g.MenuOptions) - 1
+				}
+			}
 			g.Audio.PlayMenuSelect()
 		}
 		if g.Input.IsJustPressed(glow.KeyDown) || g.Input.IsJustPressed(glow.KeyS) {
@@ -150,14 +171,23 @@ func (g *Game) Update(dt float64) {
 			if g.MenuSelection >= len(g.MenuOptions) {
 				g.MenuSelection = 0
 			}
+			// Skip disabled options
+			if g.MenuOptions[g.MenuSelection].Disabled {
+				g.MenuSelection++
+				if g.MenuSelection >= len(g.MenuOptions) {
+					g.MenuSelection = 0
+				}
+			}
 			g.Audio.PlayMenuSelect()
 		}
 		if g.Input.IsJustPressed(glow.KeyEnter) || g.Input.IsJustPressed(glow.KeySpace) {
-			switch g.MenuSelection {
-			case 0: // New Game
-				g.StartGame()
-			case 1: // Continue (loads save or starts new)
-				g.StartGame()
+			if !g.MenuOptions[g.MenuSelection].Disabled {
+				switch g.MenuSelection {
+				case 0: // New Game
+					g.StartGame()
+				case 1: // Continue
+					g.ContinueGame()
+				}
 			}
 		}
 	case StateLevelIntro:
@@ -180,6 +210,7 @@ func (g *Game) Update(dt float64) {
 		if g.GameOverTimer <= 0 {
 			if g.Input.IsJustPressed(glow.KeyEnter) || g.Input.IsJustPressed(glow.KeySpace) {
 				g.State = StateMenu
+				g.refreshMenuOptions()
 			}
 		}
 	case StateLevelComplete:
@@ -191,6 +222,7 @@ func (g *Game) Update(dt float64) {
 					g.startLevel(next)
 				} else {
 					g.State = StateMenu
+					g.refreshMenuOptions()
 				}
 			}
 		}
@@ -407,6 +439,10 @@ func (g *Game) cleanBullets() {
 		}
 	}
 	g.Bullets = g.Bullets[:n]
+}
+
+func (g *Game) refreshMenuOptions() {
+	g.MenuOptions[1].Disabled = g.SaveData.MaxLevel == 0
 }
 
 func (g *Game) saveProgress() {

@@ -9,7 +9,8 @@ import (
 
 // MenuOption represents a selectable menu item.
 type MenuOption struct {
-	Label string
+	Label    string
+	Disabled bool
 }
 
 // DrawTitleScreen renders the main menu title screen.
@@ -34,7 +35,9 @@ func DrawTitleScreen(canvas *ScaledCanvas, options []MenuOption, selected int, t
 	optY := 380
 	for i, opt := range options {
 		color := ColorGray
-		if i == selected {
+		if opt.Disabled {
+			color = ColorDarkGray
+		} else if i == selected {
 			color = ColorYellow
 			// Selection indicator (arrow)
 			DrawText(canvas, ">", cx-120, optY, ColorWhite, 2)
