@@ -2,6 +2,7 @@ package audio
 
 import (
 	"bytes"
+	"encoding/binary"
 	"log"
 
 	"github.com/AchrafSoltani/glow"
@@ -18,6 +19,9 @@ type Engine struct {
 	gameOverBuf  []byte
 	levelBuf     []byte
 	menuSelBuf   []byte
+
+	Muted  bool
+	Volume float64
 }
 
 // NewEngine initialises the audio subsystem.
@@ -36,17 +40,49 @@ func NewEngine() *Engine {
 		gameOverBuf: GenerateGameOver(),
 		levelBuf:    GenerateLevelStart(),
 		menuSelBuf:  GenerateMenuSelect(),
+		Volume:      1.0,
 	}
 	return e
 }
 
 func (e *Engine) play(buf []byte) {
-	if e.ctx == nil || len(buf) == 0 {
+	if e.ctx == nil || len(buf) == 0 || e.Muted {
 		return
 	}
-	p := e.ctx.NewPlayer(bytes.NewReader(buf))
+
+	scaled := buf
+	if e.Volume < 1.0 {
+		scaled = make([]byte, len(buf))
+		for i := 0; i+1 < len(buf); i += 2 {
+			sample := int16(binary.LittleEndian.Uint16(buf[i:]))
+			sample = int16(float64(sample) * e.Volume)
+			binary.LittleEndian.PutUint16(scaled[i:], uint16(sample))
+		}
+	}
+
+	p := e.ctx.NewPlayer(bytes.NewReader(scaled))
 	p.Play()
-	// Player will be garbage collected after playback completes
+}
+
+// ToggleMute toggles the muted state.
+func (e *Engine) ToggleMute() {
+	e.Muted = !e.Muted
+}
+
+// VolumeUp increases volume by 0.1, capped at 1.0.
+func (e *Engine) VolumeUp() {
+	e.Volume += 0.1
+	if e.Volume > 1.0 {
+		e.Volume = 1.0
+	}
+}
+
+// VolumeDown decreases volume by 0.1, floored at 0.0.
+func (e *Engine) VolumeDown() {
+	e.Volume -= 0.1
+	if e.Volume < 0.0 {
+		e.Volume = 0.0
+	}
 }
 
 // PlayShoot plays the shooting sound.

@@ -150,6 +150,17 @@ func (g *Game) Update(dt float64) {
 	g.Renderer.Time = g.Time
 	g.Input.Update()
 
+	// Global audio controls (all states)
+	if g.Input.IsJustPressed(glow.KeyM) {
+		g.Audio.ToggleMute()
+	}
+	if g.Input.IsJustPressed(glow.KeyEqual) {
+		g.Audio.VolumeUp()
+	}
+	if g.Input.IsJustPressed(glow.KeyMinus) {
+		g.Audio.VolumeDown()
+	}
+
 	switch g.State {
 	case StateMenu:
 		if g.Input.IsJustPressed(glow.KeyUp) || g.Input.IsJustPressed(glow.KeyW) {
@@ -638,7 +649,7 @@ func (g *Game) drawPlayField(canvas *render.ScaledCanvas) {
 
 func (g *Game) drawHUD(canvas *render.ScaledCanvas) {
 	remaining := g.Spawner.Remaining() + g.countAliveEnemies()
-	g.HUD.DrawHUD(canvas, remaining, g.Player.Lives, g.Level, g.Player.Score)
+	g.HUD.DrawHUD(canvas, remaining, g.Player.Lives, g.Level, g.Player.Score, g.Audio.Muted)
 }
 
 func (g *Game) drawMenu(canvas *render.ScaledCanvas) {

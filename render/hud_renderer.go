@@ -19,7 +19,7 @@ func NewHUDRenderer() *HUDRenderer {
 }
 
 // DrawHUD draws the complete HUD sidebar.
-func (h *HUDRenderer) DrawHUD(canvas *ScaledCanvas, enemiesRemaining int, lives int, level int, score int) {
+func (h *HUDRenderer) DrawHUD(canvas *ScaledCanvas, enemiesRemaining int, lives int, level int, score int, muted bool) {
 	// Background
 	canvas.DrawRect(h.X, 0, config.HUDWidth, config.WindowHeight, ColorHUDBG)
 
@@ -66,6 +66,23 @@ func (h *HUDRenderer) DrawHUD(canvas *ScaledCanvas, enemiesRemaining int, lives 
 	canvas.DrawRect(x, y, config.HUDWidth-40, 28, ColorHUDLevelBG)
 	DrawText(canvas, "STAGE", x+8, y+2, ColorHUDText, 1)
 	DrawText(canvas, fmt.Sprintf("  %2d", level+1), x+8, y+14, ColorYellow, 1)
+
+	// Mute indicator
+	if muted {
+		my := config.WindowHeight - 30
+		drawMuteIcon(canvas, x, my)
+	}
+}
+
+func drawMuteIcon(canvas *ScaledCanvas, x, y int) {
+	// Speaker body
+	canvas.DrawRect(x, y+4, 6, 8, ColorHUDText)
+	// Speaker cone
+	canvas.DrawRect(x+6, y+2, 2, 12, ColorHUDText)
+	canvas.DrawRect(x+8, y, 2, 16, ColorHUDText)
+	// X mark (muted)
+	canvas.DrawLine(x+14, y+2, x+22, y+14, ColorRed)
+	canvas.DrawLine(x+14, y+14, x+22, y+2, ColorRed)
 }
 
 func drawEnemyIcon(canvas *ScaledCanvas, x, y int) {
