@@ -39,6 +39,9 @@ func main() {
 			case glow.EventQuit:
 				running = false
 			case glow.EventKeyDown:
+				if event.Key == glow.KeyF11 {
+					win.SetFullscreen(!win.IsFullscreen())
+				}
 				g.KeyDown(event.Key)
 			case glow.EventKeyUp:
 				g.KeyUp(event.Key)
